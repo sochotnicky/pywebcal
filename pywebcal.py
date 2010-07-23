@@ -16,25 +16,31 @@ class WebCal(object):
         self.connection = None
 
     def connect(self):
-        self.connection = CollectionStorer(self._webdavURL, validateResourceNames=False)
+        if self._webdavURL[-4:] == '.ics':
+            self.connection = ResourceStorer(self._webdavURL, validateResourceNames=False)
+        else:
+            self.connection = CollectionStorer(self._webdavURL, validateResourceNames=False)
         self.connection.connection.addBasicAuthorization(self._username, self._password)
-        self.connection.validate()
 
     def get_calendar_uids(self):
         if not self.connection:
             self.connect()
+        if type(self.connection) == ResourceStorer:
+            return [0]
         resources = self.connection.listResources()
         ret = []
         for k in resources.keys():
             fname = k.rpartition('/')[2]
             ret.append(fname)
-        print ret
         return ret
 
     def get_calendar(self, uid):
         if not self.connection:
             self.connect()
-        rs = self.connection.getResourceStorer(uid)
+        if uid == 0:
+            rs = self.connection
+        else:
+            rs = self.connection.getResourceStorer(uid)
         c = Calendar.from_string(rs.downloadContent().read())
         return c
 
@@ -107,8 +113,9 @@ class ICal(object):
 #            'name', 'password')
 
 #ids = wc.get_calendar_uids()
-#print ids[2]
-#c = wc.get_calendar(ids[2])
+#print ids[0]
+#c = wc.get_calendar(ids[0])
+#print c
 
 c = Calendar.from_string(open("test.ics","r").read())
 ic = ICal(c)
