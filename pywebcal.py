@@ -16,8 +16,8 @@ class WebCal(object):
         self.connection = None
 
     def connect(self):
-        self.connection = CollectionStorer(webdavUrl, validateResourceNames=False)
-        self.connection.connection.addBasicAuthorization(username, password)
+        self.connection = CollectionStorer(self._webdavURL, validateResourceNames=False)
+        self.connection.connection.addBasicAuthorization(self._username, self._password)
         self.connection.validate()
 
     def get_calendar_uids(self):
