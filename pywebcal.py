@@ -43,52 +43,58 @@ class ICal(object):
         self.ical = calendar
         self.fileobj = StringIO.StringIO(str(self.ical))
 
-    def get_summary(self):
+    def get_event_ids(self):
+        uids = []
         for event in self.ical.walk('VEVENT'):
-            return event['SUMMARY']
-        raise Exception("No VEVENT found!")
+            uids.append(event['UID'])
+        return uids
 
-    def set_summary(self, summary):
+    def get_summary(self, uid):
+        return self._get_event(uid)['SUMMARY']
+
+    def set_summary(self, uid, summary):
+        event = self._get_event(uid)
+        event['SUMMARY'] = summary
+
+    def get_start_datetime(self, uid):
+        return self._get_datetime(uid, "DTSTART")
+
+    def set_start_datetime(self, uid, dt):
+        return self._set_datetime(uid, "DTSTART", dt)
+
+    def get_end_datetime(self, uid):
+        return self._get_datetime(uid, "DTEND")
+
+    def set_end_datetime(self, uid, dt):
+        return self._set_datetime(uid, "DTEND", dt)
+
+    def get_description(self, uid):
+        event = self._get_event(uid);
+        return event['DESCRIPTION']
+
+    def set_description(self, uid, description):
+        event = self._get_event(uid);
+        event['DESCRIPTION'] = description
+
+    def _get_event(self, uid):
         for event in self.ical.walk('VEVENT'):
-            event['SUMMARY'] = summary
-            return
-        raise Exception("No VEVENT found!")
+            if event['UID'] == uid:
+                return event
+        raise Exception("No VEVENT with UID %s found" % uid)
 
-    def get_start_datetime(self):
-        return self._get_datetime("DTSTART")
+    def _get_datetime(self, uid, compname):
+        event = self._get_event(uid);
+        strDT = str(event[compname])
+        # this should be fixed in icalendar (only date specified => fails)
+        if len(strDT) == 8:
+            strDT = "%s000000" % strDT
+        dt = vDatetime.from_ical(strDT)
+        return self._get_tz_datetime(event[compname], dt)
 
-    def set_start_datetime(self, dt):
-        return self._set_datetime("DTSTART", dt)
-
-    def get_end_datetime(self):
-        return self._get_datetime("DTEND")
-
-    def set_end_datetime(self, dt):
-        return self._set_datetime("DTEND", dt)
-
-    def getDescription(self):
-        for event in self.ical.walk('VEVENT'):
-            return event['DESCRIPTION']
-        raise Exception("No VEVENT found!")
-
-    def setDescription(self, description):
-        for event in self.ical.walk('VEVENT'):
-            event['DESCRIPTION'] = description
-            return
-        raise Exception("No VEVENT found!")
-
-    def _get_datetime(self, compname):
-        for event in self.ical.walk('VEVENT'):
-            dt = vDatetime.from_ical(str(event[compname]))
-            return self._get_tz_datetime(event[compname], dt)
-        raise Exception("No VEVENT found!")
-
-    def _set_datetime(self, compname, dt):
-        for event in self.ical.walk('VEVENT'):
-            vdt = vDatetime(dt)
-            event[compname] = vdt.ical()
-            return
-        raise Exception("No VEVENT found!")
+    def _set_datetime(self, uid, compname, dt):
+        event = self._get_event(uid);
+        vdt = vDatetime(dt)
+        event[compname] = vdt.ical()
 
     def _get_tz_datetime(self, component, dt):
         tzname = str(component.params)[5:]
@@ -106,13 +112,15 @@ class ICal(object):
 
 c = Calendar.from_string(open("test.ics","r").read())
 ic = ICal(c)
-print ic.get_summary()
-ic.set_summary('blah')
-print ic.get_summary()
+ids = ic.get_event_ids()
+i = ids[0]
+print ic.get_summary(i)
+ic.set_summary(i, 'blah')
+print ic.get_summary(i)
 print c.walk('VEVENT')[0].keys()
 print c
-dt =  ic.get_start_datetime()
+dt =  ic.get_start_datetime(i)
 print dt
-ic.set_start_datetime(dt+datetime.timedelta(days=1))
+ic.set_start_datetime(i, dt+datetime.timedelta(days=1))
 print c
-
+print len(ids)
