@@ -55,15 +55,39 @@ class ICal(object):
         raise Exception("No VEVENT found!")
 
     def getStartDateTime(self):
-        for event in self.ical.walk('VEVENT'):
-            dt = vDatetime.from_ical(str(event['DTSTART']))
-            return self._getTZDateTime(event['DTSTART'], dt)
-        raise Exception("No VEVENT found!")
+        return self._getDateTime("DTSTART")
 
     def setStartDateTime(self, dt):
+        return self._setDateTime("DTSTART", dt)
+
+    def getEndDateTime(self):
+        return self._getDateTime("DTEND")
+
+    def setEndDateTime(self, dt):
+        return self._setDateTime("DTEND", dt)
+
+    def getDescription(self):
+        for event in self.ical.walk('VEVENT'):
+            return event['DESCRIPTION']
+        raise Exception("No VEVENT found!")
+
+    def setDescription(self, description):
+        for event in self.ical.walk('VEVENT'):
+            event['DESCRIPTION'] = description
+            return
+        raise Exception("No VEVENT found!")
+
+    def _getDateTime(self, compname):
+        for event in self.ical.walk('VEVENT'):
+            dt = vDatetime.from_ical(str(event[compname]))
+            return self._getTZDateTime(event[compname], dt)
+        raise Exception("No VEVENT found!")
+
+    def _setDateTime(self, compname, dt):
         for event in self.ical.walk('VEVENT'):
             vdt = vDatetime(dt)
-            event['DTSTART'] = vdt.ical()
+            event[compname] = vdt.ical()
+            return
         raise Exception("No VEVENT found!")
 
     def _getTZDateTime(self, component, dt):
@@ -91,3 +115,5 @@ dt =  ic.getStartDateTime()
 print dt
 ic.setStartDateTime(dt+datetime.timedelta(days=1))
 print c
+
+print ic.getDescription()
