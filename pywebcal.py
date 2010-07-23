@@ -82,6 +82,14 @@ class ICal(object):
         event = self._get_event(uid);
         event['DESCRIPTION'] = description
 
+    def get_location(self, uid):
+        event = self._get_event(uid);
+        return event['LOCATION']
+
+    def set_location(self, uid, location):
+        event = self._get_event(uid);
+        event['LOCATION'] = location
+
     def _get_event(self, uid):
         for event in self.ical.walk('VEVENT'):
             if event['UID'] == uid:
