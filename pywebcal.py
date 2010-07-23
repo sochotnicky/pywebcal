@@ -1,4 +1,6 @@
 import sys
+import StringIO
+from dateutil.tz import tzical
 
 from icalendar import Calendar, Event, Timezone
 from icalendar.prop import vDatetime
@@ -39,6 +41,7 @@ class WebCal(object):
 class ICal(object):
     def __init__(self, calendar):
         self.ical = calendar
+        self.fileobj = StringIO.StringIO(str(self.ical))
 
     def getSummary(self):
         for event in self.ical.walk('VEVENT'):
@@ -53,12 +56,22 @@ class ICal(object):
 
     def getStartDateTime(self):
         for event in self.ical.walk('VEVENT'):
-            return vDatetime.from_ical(str(event['DTSTART']))
+            dt = vDatetime.from_ical(str(event['DTSTART']))
+            return self._getTZDateTime(event['DTSTART'], dt)
+        raise Exception("No VEVENT found!")
 
     def setStartDateTime(self, dt):
         for event in self.ical.walk('VEVENT'):
             vdt = vDatetime(dt)
             event['DTSTART'] = vdt.ical()
+        raise Exception("No VEVENT found!")
+
+    def _getTZDateTime(self, component, dt):
+        tzname = str(component.params)[5:]
+        tz = tzical(self.fileobj).get(tzname)
+        return datetime.datetime(dt.year, dt.month, dt.day,
+                                 dt.hour, dt.minute, dt.second,
+                                 0, tz)
 
 #wc = WebCal('https://somewhere.com/dav/Calendar',
 #            'name', 'password')
@@ -75,5 +88,6 @@ print ic.getSummary()
 print c.walk('VEVENT')[0].keys()
 print c
 dt =  ic.getStartDateTime()
+print dt
 ic.setStartDateTime(dt+datetime.timedelta(days=1))
 print c
