@@ -56,7 +56,7 @@ class ICal(object):
         return uids
 
     def get_summary(self, uid):
-        return self._get_event(uid)['SUMMARY']
+        return str(self._get_event(uid)['SUMMARY'])
 
     def set_summary(self, uid, summary):
         event = self._get_event(uid)
@@ -75,11 +75,11 @@ class ICal(object):
         return self._set_datetime(uid, "DTEND", dt)
 
     def get_description(self, uid):
-        event = self._get_event(uid);
+        event = self._get_event(uid)
         return event['DESCRIPTION']
 
     def set_description(self, uid, description):
-        event = self._get_event(uid);
+        event = self._get_event(uid)
         event['DESCRIPTION'] = description
 
     def get_location(self, uid):
@@ -87,8 +87,14 @@ class ICal(object):
         return event['LOCATION']
 
     def set_location(self, uid, location):
-        event = self._get_event(uid);
+        event = self._get_event(uid)
         event['LOCATION'] = location
+
+    def get_timezones(self):
+        tzids = []
+        for tz in self.ical.walk('VTIMEZONE'):
+            tzids.append(tz['TZID'])
+        return tzids
 
     def _get_event(self, uid):
         for event in self.ical.walk('VEVENT'):
@@ -103,7 +109,10 @@ class ICal(object):
         if len(strDT) == 8:
             strDT = "%s000000" % strDT
         dt = vDatetime.from_ical(strDT)
-        return self._get_tz_datetime(event[compname], dt)
+        if len(strDT) == 16: # UTC time
+            return dt
+        else:
+            return self._get_tz_datetime(event[compname], dt)
 
     def _set_datetime(self, uid, compname, dt):
         event = self._get_event(uid);
@@ -111,10 +120,11 @@ class ICal(object):
         event[compname] = vdt.ical()
 
     def _get_tz_datetime(self, component, dt):
-        if hasattr(component, 'params'):
+
+        if hasattr(component, 'params') and str(component.params)[0:4] == 'TZID':
             tzname = str(component.params)[5:]
         else:
-            tzname = 'UTC'
+            tzname = self.get_timezones()[0]
         # we should read all timezones in the beginning
         # and cache them
         tz = tzical(self.fileobj).get(tzname)
