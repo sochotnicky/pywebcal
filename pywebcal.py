@@ -1,6 +1,7 @@
 import sys
 import StringIO
-from dateutil.tz import tzical
+from dateutil.tz import tzical, gettz
+from dateutil.rrule import rrulestr
 
 from icalendar import Calendar, Event, Timezone
 from icalendar.prop import vDatetime
@@ -90,6 +91,32 @@ class ICal(object):
         event = self._get_event(uid)
         event['LOCATION'] = location
 
+    def get_rrule(self, uid):
+        try:
+            ret = None
+            rrule_str = self.get_rrule_str(uid)
+            ret = rrulestr(rrule_str, dtstart=self.get_start_datetime(uid))
+        except ValueError:
+            pass
+        finally:
+            return ret
+
+    def get_rrule_str(self, uid):
+        event = self._get_event(uid)
+        return str(event['RRULE'])
+
+    def events_after(self, dt):
+        eafter = []
+        eids = self.get_event_ids()
+        for eid in eids:
+            rule = self.get_rrule(eid)
+            if not rule:
+                continue
+            d = rule.after(dt, inc=True)
+            print d, self.get_summary(eid)
+            eafter.append((d, self.get_summary(eid)))
+        return eafter
+
     def get_timezones(self):
         tzids = []
         for tz in self.ical.walk('VTIMEZONE'):
@@ -155,3 +182,10 @@ print dt
 ic.set_start_datetime(i, dt+datetime.timedelta(days=1))
 print c
 print len(ids)
+
+print "Summary: %s" % ic.get_summary(i)
+print "Start: %s" % ic.get_start_datetime(i)
+print "End: %s" % ic.get_end_datetime(i)
+print "Location: %s" % ic.get_location(i)
+
+ic.events_after(datetime.datetime(2010,07,10,0,0,0,0,gettz()))
