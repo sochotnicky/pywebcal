@@ -111,8 +111,14 @@ class ICal(object):
         event[compname] = vdt.ical()
 
     def _get_tz_datetime(self, component, dt):
-        tzname = str(component.params)[5:]
+        if hasattr(component, 'params'):
+            tzname = str(component.params)[5:]
+        else:
+            tzname = 'UTC'
+        # we should read all timezones in the beginning
+        # and cache them
         tz = tzical(self.fileobj).get(tzname)
+        self.fileobj.seek(0)
         return datetime.datetime(dt.year, dt.month, dt.day,
                                  dt.hour, dt.minute, dt.second,
                                  0, tz)
