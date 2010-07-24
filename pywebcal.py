@@ -9,23 +9,30 @@ from webdav.WebdavClient import CollectionStorer,ResourceStorer
 import datetime
 
 class WebCal(object):
+    """
+    Class providing simple access to iCal calendars over WebDAV
 
-    def __init__(self, webdavURL, username, password):
+    """
+
+    def __init__(self, webdavURL, username = None, password = None):
+        """webdavURL - URL of webdav calendar. For example
+                    http://www.google.com/calendar/ical/9e11j73ff4pdomjlort7v10h640okf47%40import.calendar.google.com/public/basic.ics
+        username - provide username in case it is needed
+        password - password to access calendar
+        """
         self._webdavURL = webdavURL
         self._username = username
         self._password = password
         self.connection = None
 
-    def connect(self):
-        if self._webdavURL[-4:] == '.ics':
-            self.connection = ResourceStorer(self._webdavURL, validateResourceNames=False)
-        else:
-            self.connection = CollectionStorer(self._webdavURL, validateResourceNames=False)
-        self.connection.connection.addBasicAuthorization(self._username, self._password)
-
     def get_calendar_uids(self):
+        """get_calendar_uids() -> [uid, uid1, ...]
+
+        Returns list of calendar UIDs in collection. If the webdav URL
+        points to single iCal file, list with one UID 0 is returned
+        """
         if not self.connection:
-            self.connect()
+            self._connect()
         if type(self.connection) == ResourceStorer:
             return [0]
         resources = self.connection.listResources()
@@ -36,8 +43,12 @@ class WebCal(object):
         return ret
 
     def get_calendar(self, uid):
+        """get_calendar(uid) -> icalendar.Calendar
+
+        Returns Calendar instance from webdav URL identified by uid.
+        """
         if not self.connection:
-            self.connect()
+            self._connect()
         if uid == 0:
             rs = self.connection
         else:
@@ -45,14 +56,33 @@ class WebCal(object):
         c = Calendar.from_string(rs.downloadContent().read())
         return c
 
+    def _connect(self):
+        if self._webdavURL[-4:] == '.ics':
+            self.connection = ResourceStorer(self._webdavURL, validateResourceNames=False)
+        else:
+            self.connection = CollectionStorer(self._webdavURL, validateResourceNames=False)
+
+        if self._username and self._password:
+            self.connection.connection.addBasicAuthorization(self._username, self._password)
+
+
 class ICal(object):
+    """High-level interface for working with iCal files"""
+
     def __init__(self, calendar):
+        """Initializes class with given icalendar.Calendar instance
+        """
         self.ical = calendar
 
         fileobj = StringIO.StringIO(str(self.ical))
         self._tzical = tzical(fileobj)
 
     def get_event_ids(self):
+        """get_event_ids() -> [uid, uid1, ...]
+
+        Returns UIDs of all VEVENTs defined in iCal instance. These
+        UIDs are used for access to concrete events defined within
+        iCal file"""
         uids = []
         for event in self.ical.walk('VEVENT'):
             uids.append(event['UID'])
@@ -86,7 +116,7 @@ class ICal(object):
         event['DESCRIPTION'] = description
 
     def get_location(self, uid):
-        event = self._get_event(uid);
+        event = self._get_event(uid)
         return event['LOCATION']
 
     def set_location(self, uid, location):
@@ -94,6 +124,13 @@ class ICal(object):
         event['LOCATION'] = location
 
     def get_rrule(self, uid):
+        """get_rrule(uid) -> dateutil.rrule
+
+        Returns RRULE defined for given event or None if
+        no RRULE has been defined
+
+        uid - Event UID for which rrule should be returned
+        """
         try:
             ret = None
             rrule_str = self.get_rrule_str(uid)
@@ -104,10 +141,20 @@ class ICal(object):
             return ret
 
     def get_rrule_str(self, uid):
+        """get_rrule_str(uid) -> string
+
+        Returns string representation of repeat rule for given event
+        """
         event = self._get_event(uid)
         return str(event['RRULE'])
 
     def events_after(self, dt):
+        """events_after(datetime) -> [(datetime, uid), (datetime1, uid1), ...]
+
+        Returns list of tuples of (datetime.datetime, Event UID)
+        where datetime represents date of nearest occurrence of given
+        event after dt datetime object
+        """
         eafter = []
         eids = self.get_event_ids()
         for eid in eids:
@@ -122,6 +169,12 @@ class ICal(object):
         return eafter
 
     def get_timezones(self):
+        """get_timezones() -> [TZID, TZID1, ...]
+
+        Returns list of all TZIDS defined in iCal file or empty list
+        if no TZIDs have been defined (all times are in UTC). TZID is for
+        example 'Europe/Berlin'
+        """
         tzids = []
         for tz in self.ical.walk('VTIMEZONE'):
             tzids.append(tz['TZID'])
@@ -134,11 +187,19 @@ class ICal(object):
         raise Exception("No VEVENT with UID %s found" % uid)
 
     def _get_datetime(self, uid, compname):
-        event = self._get_event(uid);
+        """_get_datetime(uid, compname) -> datetime
+
+        Returns TZ aware datetime object from given sub-component
+        (DTSTART, DTEND, etc) of given VEVENT identified by uid.
+        """
+        event = self._get_event(uid)
         strDT = str(event[compname])
         # this should be fixed in icalendar (only date specified => fails)
         if len(strDT) == 8:
             strDT = "%s000000" % strDT
+
+        # unfortunately vDatetime.from_ical is not TZ aware (ignores
+        # TZIDs defined in dates/times). We need to fix this...
         dt = vDatetime.from_ical(strDT)
         if len(strDT) == 16: # UTC time
             return dt
@@ -146,7 +207,7 @@ class ICal(object):
             return self._get_tz_datetime(event[compname], dt)
 
     def _set_datetime(self, uid, compname, dt):
-        event = self._get_event(uid);
+        event = self._get_event(uid)
         vdt = vDatetime(dt)
         event[compname] = vdt.ical()
 
@@ -194,4 +255,4 @@ print "Start: %s" % ic.get_start_datetime(i)
 print "End: %s" % ic.get_end_datetime(i)
 print "Location: %s" % ic.get_location(i)
 
-ic.events_after(datetime.datetime(2010,07,10,0,0,0,0,gettz()))
+print ic.events_after(datetime.datetime(2010,07,10,0,0,0,0,gettz()))
