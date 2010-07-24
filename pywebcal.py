@@ -113,10 +113,12 @@ class ICal(object):
         for eid in eids:
             rule = self.get_rrule(eid)
             if not rule:
-                continue
-            d = rule.after(dt, inc=True)
-            print d, self.get_summary(eid)
-            eafter.append((d, self.get_summary(eid)))
+                sdate = self.get_start_datetime(eid)
+                if dt < sdate:
+                    eafter.append((sdate, eid))
+            else:
+                d = rule.after(dt, inc=True)
+                eafter.append((d, eid))
         return eafter
 
     def get_timezones(self):
