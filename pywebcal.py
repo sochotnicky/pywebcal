@@ -151,11 +151,15 @@ class ICal(object):
         event[compname] = vdt.ical()
 
     def _get_tz_datetime(self, component, dt):
-
         if hasattr(component, 'params') and str(component.params)[0:4] == 'TZID':
             tzname = str(component.params)[5:]
         else:
-            tzname = self.get_timezones()[0]
+            tzids = self.get_timezones()
+            if len(tzids) == 0:
+                raise Exception("Time of %s component is not in UTC" \
+                                "and no VTIMEZONEs have been defined!" \
+                                " Bailing out" % str(component) )
+            tzname = tzids[0]
 
         tz = self._tzical.get(tzname)
         return datetime.datetime(dt.year, dt.month, dt.day,
