@@ -48,7 +48,9 @@ class WebCal(object):
 class ICal(object):
     def __init__(self, calendar):
         self.ical = calendar
-        self.fileobj = StringIO.StringIO(str(self.ical))
+
+        fileobj = StringIO.StringIO(str(self.ical))
+        self._tzical = tzical(fileobj)
 
     def get_event_ids(self):
         uids = []
@@ -152,10 +154,8 @@ class ICal(object):
             tzname = str(component.params)[5:]
         else:
             tzname = self.get_timezones()[0]
-        # we should read all timezones in the beginning
-        # and cache them
-        tz = tzical(self.fileobj).get(tzname)
-        self.fileobj.seek(0)
+
+        tz = self._tzical.get(tzname)
         return datetime.datetime(dt.year, dt.month, dt.day,
                                  dt.hour, dt.minute, dt.second,
                                  0, tz)
