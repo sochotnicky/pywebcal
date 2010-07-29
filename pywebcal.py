@@ -24,7 +24,7 @@ try:
     from webdav.WebdavClient import CollectionStorer,ResourceStorer
 except ImportError:
     print """You miss dependencies for running this library. Please
-python webdav library (http://sourceforge.net/projects/pythonwebdavlib/)"""
+install python webdav library (https://code.launchpad.net/python-webdav-lib/)"""
     sys.exit(1)
 
 class WebCal(object):
@@ -167,25 +167,65 @@ class ICal(object):
         event = self._get_event(uid)
         return str(event['RRULE'])
 
-    def events_after(self, dt):
-        """events_after(datetime) -> [(datetime, uid), (datetime1, uid1), ...]
+    def events_before(self, dt):
+        """events_before(datetime) -> [(datetime, uid), (datetime1, uid1), ...]
 
         Returns list of tuples of (datetime.datetime, Event UID)
-        where datetime represents date of nearest occurrence of given
-        event after dt datetime object
+        where datetime represents date of nearest occurrence (start) of given
+        event before dt datetime object
         """
-        eafter = []
+        ret = []
         eids = self.get_event_ids()
         for eid in eids:
             rule = self.get_rrule(eid)
             if not rule:
                 sdate = self.get_start_datetime(eid)
-                if dt < sdate:
-                    eafter.append((sdate, eid))
+                if dt >= sdate:
+                    ret.append((sdate, eid))
+            else:
+                d = rule.before(dt, inc=True)
+                ret.append((d, eid))
+        return ret
+
+    def events_between(self, dtstart, dtend):
+        """events_before(datetime) -> [(datetime, uid), (datetime1, uid1), ...]
+
+        Returns list of tuples of (datetime.datetime, Event UID)
+        where datetime represents date of occurrence (start) of given
+        event between dtstart and dtend datetime objects
+        """
+        ret = []
+        eids = self.get_event_ids()
+        for eid in eids:
+            rule = self.get_rrule(eid)
+            if not rule:
+                sdate = self.get_start_datetime(eid)
+                if dtstart <= sdate <= dtend:
+                    ret.append((sdate, eid))
+            else:
+                d = rule.between(dtstart, dtend, inc=True)
+                ret.append((d, eid))
+        return ret
+
+    def events_after(self, dt):
+        """events_after(datetime) -> [(datetime, uid), (datetime1, uid1), ...]
+
+        Returns list of tuples of (datetime.datetime, Event UID)
+        where datetime represents date of nearest occurrence (start) of given
+        event after dt datetime object
+        """
+        ret = []
+        eids = self.get_event_ids()
+        for eid in eids:
+            rule = self.get_rrule(eid)
+            if not rule:
+                sdate = self.get_start_datetime(eid)
+                if dt <= sdate:
+                    ret.append((sdate, eid))
             else:
                 d = rule.after(dt, inc=True)
-                eafter.append((d, eid))
-        return eafter
+                ret.append((d, eid))
+        return ret
 
     def get_timezones(self):
         """get_timezones() -> [TZID, TZID1, ...]
@@ -246,32 +286,4 @@ class ICal(object):
                                  dt.hour, dt.minute, dt.second,
                                  0, tz)
 
-#wc = WebCal('https://somewhere.com/dav/Calendar',
-#            'name', 'password')
 
-#ids = wc.get_calendar_uids()
-#print ids[0]
-#c = wc.get_calendar(ids[0])
-#print c
-
-c = Calendar.from_string(open("test.ics","r").read())
-ic = ICal(c)
-ids = ic.get_event_ids()
-i = ids[0]
-print ic.get_summary(i)
-ic.set_summary(i, 'blah')
-print ic.get_summary(i)
-print c.walk('VEVENT')[0].keys()
-print c
-dt =  ic.get_start_datetime(i)
-print dt
-ic.set_start_datetime(i, dt+datetime.timedelta(days=1))
-print c
-print len(ids)
-
-print "Summary: %s" % ic.get_summary(i)
-print "Start: %s" % ic.get_start_datetime(i)
-print "End: %s" % ic.get_end_datetime(i)
-print "Location: %s" % ic.get_location(i)
-
-print ic.events_after(datetime.datetime(2010,07,10,0,0,0,0,gettz()))
