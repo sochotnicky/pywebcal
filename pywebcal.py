@@ -1,6 +1,9 @@
 import sys
 import StringIO
 import datetime
+import logging
+import pickle
+from os import path, environ
 
 try:
     from dateutil.tz import tzical, gettz
@@ -29,9 +32,10 @@ install python webdav library (https://code.launchpad.net/python-webdav-lib/)"""
 
 class WebCal(object):
     """
-    Class providing simple access to iCal calendars over WebDAV
+    Class providing simple cached access to iCal calendars over WebDAV
 
     """
+    _cache_file = '%s/.pywebcal.cache' % environ['HOME']
 
     def __init__(self, webdavURL, username = None, password = None):
         """webdavURL - URL of webdav calendar. For example
@@ -43,6 +47,8 @@ class WebCal(object):
         self._username = username
         self._password = password
         self.connection = None
+        self._modifiedTimes = {}
+        self._cache = None
 
     def get_calendar_uids(self):
         """get_calendar_uids() -> [uid, uid1, ...]
@@ -59,6 +65,7 @@ class WebCal(object):
         for k in resources.keys():
             fname = k.rpartition('/')[2]
             ret.append(fname)
+            self._modifiedTimes[fname] = resources[k].getLastModified()
         return ret
 
     def get_calendar(self, uid):
@@ -72,7 +79,16 @@ class WebCal(object):
             rs = self.connection
         else:
             rs = self.connection.getResourceStorer(uid)
-        c = Calendar.from_string(rs.downloadContent().read())
+        tm = self._modifiedTimes[uid]
+        modified = datetime.datetime(tm.tm_year, tm.tm_mon, tm.tm_mday,
+                               tm.tm_hour, tm.tm_min, tm.tm_sec, 0,
+                               gettz("UTC"))
+        cc = self.__get_cached_calendar(uid)
+        if cc and cc[0] == modified: # calendar is cached
+            c = cc[1]
+        else:
+            c = Calendar.from_string(rs.downloadContent().read())
+            self.__set_cached_calendar(uid, c, modified)
         return c
 
     def _connect(self):
@@ -84,6 +100,39 @@ class WebCal(object):
         if self._username and self._password:
             self.connection.connection.addBasicAuthorization(self._username, self._password)
 
+        self.connection.connection.logger.setLevel(logging.WARNING)
+
+    def __set_cached_calendar(self, uid, calendar, modified):
+        if not self._cache:
+            self.__load_cache()
+
+        if self._cache.has_key(uid) and self._cache[uid][0] == modified:
+            return
+
+        self._cache[uid] = (modified, calendar)
+        self.__save_cache()
+
+    def __get_cached_calendar(self, uid):
+        if not self._cache:
+            self.__load_cache()
+
+        if self._cache and self._cache.has_key(uid):
+            return self._cache[uid]
+        else:
+            return None
+
+    def __load_cache(self):
+        if not path.isfile(self._cache_file) or path.getsize(self._cache_file) == 0:
+            self._cache = {}
+            return
+        cacheFile = open(self._cache_file, 'r')
+        self._cache = pickle.load(cacheFile)
+        cacheFile.close()
+
+    def __save_cache(self):
+        cacheFile = open(self._cache_file, 'w')
+        pickle.dump(self._cache, cacheFile)
+        cacheFile.close()
 
 class ICal(object):
     """High-level interface for working with iCal files"""
@@ -285,5 +334,3 @@ class ICal(object):
         return datetime.datetime(dt.year, dt.month, dt.day,
                                  dt.hour, dt.minute, dt.second,
                                  0, tz)
-
-
