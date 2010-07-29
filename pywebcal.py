@@ -1,12 +1,31 @@
 import sys
 import StringIO
-from dateutil.tz import tzical, gettz
-from dateutil.rrule import rrulestr
-
-from icalendar import Calendar, Event, Timezone
-from icalendar.prop import vDatetime
-from webdav.WebdavClient import CollectionStorer,ResourceStorer
 import datetime
+
+try:
+    from dateutil.tz import tzical, gettz
+    from dateutil.rrule import rrulestr
+except ImportError:
+    print """You miss dependencies for running this library. Please
+install dateutil module (python-dateutil)."""
+    sys.exit(1)
+
+try:
+    from icalendar import Calendar, Event, Timezone
+    from icalendar.prop import vDatetime
+except ImportError:
+    print """You miss dependencies for running this library. Please
+install icalendar module (python-icalendar). You can find sources of
+icalendar on http://codespeak.net/icalendar/. Or install it with
+`easy_install icalendar`"""
+    sys.exit(1)
+
+try:
+    from webdav.WebdavClient import CollectionStorer,ResourceStorer
+except ImportError:
+    print """You miss dependencies for running this library. Please
+python webdav library (http://sourceforge.net/projects/pythonwebdavlib/)"""
+    sys.exit(1)
 
 class WebCal(object):
     """
