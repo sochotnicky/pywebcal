@@ -234,7 +234,8 @@ class ICal(object):
                     ret.append((sdate, eid))
             else:
                 d = rule.before(dt, inc=True)
-                ret.append((d, eid))
+                if d:
+                    ret.append((d, eid))
         return ret
 
     def events_between(self, dtstart, dtend):
@@ -254,7 +255,8 @@ class ICal(object):
                     ret.append((sdate, eid))
             else:
                 d = rule.between(dtstart, dtend, inc=True)
-                ret.append((d, eid))
+                if d:
+                    ret.append((d, eid))
         return ret
 
     def events_after(self, dt):
@@ -274,7 +276,8 @@ class ICal(object):
                     ret.append((sdate, eid))
             else:
                 d = rule.after(dt, inc=True)
-                ret.append((d, eid))
+                if d:
+                    ret.append((d, eid))
         return ret
 
     def get_timezones(self):
