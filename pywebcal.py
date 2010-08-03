@@ -59,13 +59,17 @@ class WebCal(object):
         if not self.connection:
             self._connect()
         if type(self.connection) == ResourceStorer:
+            self._modifiedTimes[0] = datetime.datetime.now(gettz())
             return [0]
         resources = self.connection.listResources()
         ret = []
         for k in resources.keys():
             fname = k.rpartition('/')[2]
             ret.append(fname)
-            self._modifiedTimes[fname] = resources[k].getLastModified()
+            tm = resources[k].getLastModified()
+            self._modifiedTimes[fname] = datetime.datetime(tm.tm_year, tm.tm_mon, tm.tm_mday,
+                                                           tm.tm_hour, tm.tm_min, tm.tm_sec, 0,
+                                                           gettz("UTC"))
         return ret
 
     def get_calendar(self, uid):
@@ -79,10 +83,7 @@ class WebCal(object):
             rs = self.connection
         else:
             rs = self.connection.getResourceStorer(uid)
-        tm = self._modifiedTimes[uid]
-        modified = datetime.datetime(tm.tm_year, tm.tm_mon, tm.tm_mday,
-                               tm.tm_hour, tm.tm_min, tm.tm_sec, 0,
-                               gettz("UTC"))
+        modified = self._modifiedTimes[uid]
         cc = self.__get_cached_calendar(uid)
         if cc and cc[0] == modified: # calendar is cached
             c = cc[1]
