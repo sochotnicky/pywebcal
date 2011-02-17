@@ -221,7 +221,15 @@ class ICal(object):
         try:
             ret = None
             rrule_str = self.get_rrule_str(uid)
-            ret = rrulestr(rrule_str, dtstart=self.get_start_datetime(uid))
+            rule_parts = rrule_str.split(';')
+            fixed_rrule = ""
+            for part in rule_parts:
+                if part.startswith('UNTIL') and len(part) == 14:
+                    part = "%s000000" % part
+                fixed_rrule.append(part + ";")
+
+            ret = rrulestr(fixed_rrule, dtstart=self.get_start_datetime(uid))
+            print rrule_str
         except ValueError:
             pass
         finally:
