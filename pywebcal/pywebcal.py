@@ -144,14 +144,13 @@ class WebCal(object):
         if not path.isfile(self._cache_file) or path.getsize(self._cache_file) == 0:
             self._cache = {}
             return
-        cacheFile = open(self._cache_file, 'r')
-        self._cache = pickle.load(cacheFile)
-        cacheFile.close()
+        with open(self._cache_file, 'r') as cacheFile:
+            self._cache = pickle.load(cacheFile)
 
     def __save_cache(self):
-        cacheFile = open(self._cache_file, 'w')
-        pickle.dump(self._cache, cacheFile)
-        cacheFile.close()
+        print len(self._cache.keys())
+        with open(self._cache_file, 'w') as cacheFile:
+            pickle.dump(self._cache, cacheFile)
 
 class ICal(object):
     """High-level interface for working with iCal files"""
