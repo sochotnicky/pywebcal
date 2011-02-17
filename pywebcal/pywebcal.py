@@ -148,7 +148,6 @@ class WebCal(object):
             self._cache = pickle.load(cacheFile)
 
     def __save_cache(self):
-        print len(self._cache.keys())
         with open(self._cache_file, 'w') as cacheFile:
             pickle.dump(self._cache, cacheFile)
 
