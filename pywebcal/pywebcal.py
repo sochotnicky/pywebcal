@@ -212,9 +212,23 @@ class ICal(object):
         event = self._get_event(uid)
         return event['URL']
 
-    def set_url(self, uid, location):
+    def set_url(self, uid, url):
         event = self._get_event(uid)
-        event['URL'] = location
+        event['URL'] = url
+
+    def get_attendees(self, uid):
+        event = self._get_event(uid)
+        alist = event['ATTENDEE']
+        ret = []
+        for at in alist:
+            ret.append(Attendee(at))
+        return ret
+
+    def set_attendees(self, uid, atlist):
+        event = self._get_event(uid)
+
+        return event['ATTENDEE']
+
 
     def get_rrule(self, uid):
         """get_rrule(uid) -> dateutil.rrule
@@ -235,7 +249,6 @@ class ICal(object):
                 fixed_rrule.append(part + ";")
 
             ret = rrulestr(fixed_rrule, dtstart=self.get_start_datetime(uid))
-            print rrule_str
         except ValueError:
             pass
         finally:
@@ -365,3 +378,44 @@ class ICal(object):
         return datetime.datetime(dt.year, dt.month, dt.day,
                                  dt.hour, dt.minute, dt.second,
                                  0, tz)
+
+class Attendee(object):
+
+    possible_params = [('cn', 'name'),
+                       ('role', 'role'),
+                       ('rsvp', 'rsvp_request'),
+                       ('partstat','rsvp_status'),
+        ]
+
+
+    def __init__(self, ical_attendee):
+        self.address = str(ical_attendee)
+        self.__ical = ical_attendee
+        self.params = self.__ical.params
+        for a, b in self.possible_params:
+            self.__set_param(a, b)
+
+    def __set_param(self, paramname, propname=None):
+        if self.params.has_key(paramname):
+            if not propname:
+                propname = paramname
+            setattr(self, propname, self.params[paramname])
+
+    def __split_str(self, s):
+        if len(s) < 75:
+            return s
+        cur_line = s
+        ret = ""
+        while len(cur_line) > 74:
+            ret = "%s%s\n\r " % (ret, cur_line[0:74])
+            cur_line = cur_line[74:]
+        ret = "%s%s" % (ret, cur_line[0:74])
+        return ret
+
+    def __str__(self):
+        pars = ""
+        for param, propname in self.possible_params:
+            if hasattr(self, propname):
+                self.params[param] = getattr(self, propname)
+        ret = "ATTENDEE;%s:%s" % (self.params, self.address)
+        return self.__split_str(ret)

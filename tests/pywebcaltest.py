@@ -24,15 +24,18 @@ from datetime import tzinfo, timedelta, datetime
 
 
 class ICalTest(unittest.TestCase):
-    testFile = 'test.ics'
 
     def setUp(self):
         c = Calendar.from_string(open("test.ics","r").read())
         self.ical = ICal(c)
+        c = Calendar.from_string(open("test2.ics","r").read())
+        self.ical2 = ICal(c)
 
     def test_get_event_ids(self):
         ids = self.ical.get_event_ids()
         self.assertEqual(32, len(ids))
+        ids = self.ical2.get_event_ids()
+        self.assertEqual(1, len(ids))
 
     def test_datetime(self):
         ids = self.ical.get_event_ids()
@@ -109,6 +112,25 @@ class ICalTest(unittest.TestCase):
 
         url = self.ical.get_url(ids[-1])
         self.assertEqual(url, "http://www.last.fm/event/1328092+Blind+Guardian+at+Gasometer+on+16+October+2010")
+
+    def test_attendees(self):
+        ids = self.ical2.get_event_ids()
+        at = self.ical2.get_attendees(ids[0])
+        self.assertEquals(2, len(at))
+        self.assertEquals("Milgrim", at[0].name)
+        self.assertEquals("mailto:milgrim@junkie.me", at[0].address)
+        self.assertEquals("REQ-PARTICIPANT", at[0].role)
+        self.assertEquals("TRUE", at[0].rsvp_request)
+        self.assertEquals("NEEDS-ACTION", at[0].rsvp_status)
+        self.assertEquals(str(at[0]), "ATTENDEE;CN=Milgrim;PARTSTAT=NEEDS-ACTION;ROLE=REQ-PARTICIPANT;RSVP=TRUE:m\n\r ailto:milgrim@junkie.me")
+
+
+        self.assertEquals("Idoru", at[1].name)
+        self.assertEquals("mailto:idoru@virtual.me", at[1].address)
+        self.assertEquals("REQ-PARTICIPANT", at[1].role)
+        self.assertEquals("TRUE", at[1].rsvp_request)
+        self.assertEquals("DECLINED", at[1].rsvp_status)
+        self.assertEquals(str(at[1]), "ATTENDEE;CN=Idoru;PARTSTAT=DECLINED;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:\n\r idoru@virtual.me")
 
 
 
