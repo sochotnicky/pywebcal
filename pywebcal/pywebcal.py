@@ -208,6 +208,14 @@ class ICal(object):
         event = self._get_event(uid)
         event['LOCATION'] = location
 
+    def get_url(self, uid):
+        event = self._get_event(uid)
+        return event['URL']
+
+    def set_url(self, uid, location):
+        event = self._get_event(uid)
+        event['URL'] = location
+
     def get_rrule(self, uid):
         """get_rrule(uid) -> dateutil.rrule
 

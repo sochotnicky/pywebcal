@@ -102,6 +102,14 @@ class ICalTest(unittest.TestCase):
         after = self.ical.events_after(datetime(2010, 12, 7, 0, 0, 0, 0, UTC()))
         self.assertEqual(0, len(after))
 
+    def test_url(self):
+        ids = self.ical.get_event_ids()
+        url = self.ical.get_url(ids[0])
+        self.assertEqual(url, "http://www.last.fm/festival/1416224+Grape+Festival+2010")
+
+        url = self.ical.get_url(ids[-1])
+        self.assertEqual(url, "http://www.last.fm/event/1328092+Blind+Guardian+at+Gasometer+on+16+October+2010")
+
 
 
 ZERO = timedelta(0)
