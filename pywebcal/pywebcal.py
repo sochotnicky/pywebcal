@@ -32,13 +32,12 @@ install dateutil module (python-dateutil)."""
     sys.exit(1)
 
 try:
-    from icalendar import Calendar, Event, Timezone
-    from icalendar.prop import vDatetime
+    import vobject
 except ImportError:
     print """You miss dependencies for running this library. Please
-install icalendar module (python-icalendar). You can find sources of
-icalendar on http://codespeak.net/icalendar/. Or install it with
-`easy_install icalendar`"""
+install vobject module (python-vobject). You can find sources of
+vobject on http://vobject.skyhouseconsulting.com/. Or install it with
+`easy_install vobject`"""
     sys.exit(1)
 
 try:
@@ -154,12 +153,12 @@ class WebCal(object):
 class ICal(object):
     """High-level interface for working with iCal files"""
 
-    def __init__(self, calendar):
-        """Initializes class with given icalendar.Calendar instance
+    def __init__(self, vobj):
+        """Initializes class with given vobject.icalendar.VCalendar2_0 instance
         """
-        self.ical = calendar
+        self.ical = vobj
 
-        fileobj = StringIO.StringIO(str(self.ical))
+        fileobj = StringIO.StringIO(str(self.ical.serialize()))
         self._tzical = tzical(fileobj)
 
     def get_event_ids(self):
@@ -169,118 +168,39 @@ class ICal(object):
         UIDs are used for access to concrete events defined within
         iCal file"""
         uids = []
-        for event in self.ical.walk('VEVENT'):
-            uids.append(event['UID'])
+        for event in self.ical.vevent_list:
+            uids.append(event.uid.value)
         return uids
 
-    def get_summary(self, uid):
-        return str(self._get_event(uid)['SUMMARY'])
+    def get_events(self):
+        """get_events() -> [Event, Event1, ...]
 
-    def set_summary(self, uid, summary):
-        event = self._get_event(uid)
-        event['SUMMARY'] = summary
-
-    def get_start_datetime(self, uid):
-        return self._get_datetime(uid, "DTSTART")
-
-    def set_start_datetime(self, uid, dt):
-        return self._set_datetime(uid, "DTSTART", dt)
-
-    def get_end_datetime(self, uid):
-        return self._get_datetime(uid, "DTEND")
-
-    def set_end_datetime(self, uid, dt):
-        return self._set_datetime(uid, "DTEND", dt)
-
-    def get_description(self, uid):
-        event = self._get_event(uid)
-        return event['DESCRIPTION']
-
-    def set_description(self, uid, description):
-        event = self._get_event(uid)
-        event['DESCRIPTION'] = description
-
-    def get_location(self, uid):
-        event = self._get_event(uid)
-        return event['LOCATION']
-
-    def set_location(self, uid, location):
-        event = self._get_event(uid)
-        event['LOCATION'] = location
-
-    def get_url(self, uid):
-        event = self._get_event(uid)
-        return event['URL']
-
-    def set_url(self, uid, url):
-        event = self._get_event(uid)
-        event['URL'] = url
-
-    def get_attendees(self, uid):
-        event = self._get_event(uid)
-        alist = event['ATTENDEE']
+        Returns Event classes defined in iCal instance.
+        """
         ret = []
-        for at in alist:
-            ret.append(Attendee(at))
+        for event in self.ical.vevent_list:
+            ret.append(Event(self.ical, event, self._tzical))
         return ret
 
-    def set_attendees(self, uid, atlist):
-        event = self._get_event(uid)
-
-        return event['ATTENDEE']
-
-
-    def get_rrule(self, uid):
-        """get_rrule(uid) -> dateutil.rrule
-
-        Returns RRULE defined for given event or None if
-        no RRULE has been defined
-
-        uid - Event UID for which rrule should be returned
-        """
-        try:
-            ret = None
-            rrule_str = self.get_rrule_str(uid)
-            rule_parts = rrule_str.split(';')
-            fixed_rrule = ""
-            for part in rule_parts:
-                if part.startswith('UNTIL') and len(part) == 14:
-                    part = "%s000000" % part
-                fixed_rrule.append(part + ";")
-
-            ret = rrulestr(fixed_rrule, dtstart=self.get_start_datetime(uid))
-        except ValueError:
-            pass
-        finally:
-            return ret
-
-    def get_rrule_str(self, uid):
-        """get_rrule_str(uid) -> string
-
-        Returns string representation of repeat rule for given event
-        """
-        event = self._get_event(uid)
-        return str(event['RRULE'])
-
     def events_before(self, dt):
-        """events_before(datetime) -> [(datetime, uid), (datetime1, uid1), ...]
+        """events_before(datetime) -> [(datetime, Event), (datetime1, Event1), ...]
 
-        Returns list of tuples of (datetime.datetime, Event UID)
+        Returns list of tuples of (datetime.datetime, Event)
         where datetime represents date of nearest occurrence (start) of given
         event before dt datetime object
         """
         ret = []
-        eids = self.get_event_ids()
-        for eid in eids:
-            rule = self.get_rrule(eid)
+        es = self.get_events()
+        for e in es:
+            rule = e.get_rrule()
             if not rule:
-                sdate = self.get_start_datetime(eid)
+                sdate = e.get_start_datetime()
                 if dt >= sdate:
-                    ret.append((sdate, eid))
+                    ret.append((sdate, e))
             else:
                 d = rule.before(dt, inc=True)
                 if d:
-                    ret.append((d, eid))
+                    ret.append((d, e))
         return ret
 
     def events_between(self, dtstart, dtend):
@@ -291,17 +211,17 @@ class ICal(object):
         event between dtstart and dtend datetime objects
         """
         ret = []
-        eids = self.get_event_ids()
-        for eid in eids:
-            rule = self.get_rrule(eid)
+        es = self.get_events()
+        for e in es:
+            rule = e.get_rrule()
             if not rule:
-                sdate = self.get_start_datetime(eid)
+                sdate = e.get_start_datetime()
                 if dtstart <= sdate <= dtend:
-                    ret.append((sdate, eid))
+                    ret.append((sdate, e))
             else:
                 d = rule.between(dtstart, dtend, inc=True)
                 if d:
-                    ret.append((d, eid))
+                    ret.append((d, e))
         return ret
 
     def events_after(self, dt):
@@ -312,17 +232,17 @@ class ICal(object):
         event after dt datetime object
         """
         ret = []
-        eids = self.get_event_ids()
-        for eid in eids:
-            rule = self.get_rrule(eid)
+        es = self.get_events()
+        for e in es:
+            rule = e.get_rrule()
             if not rule:
-                sdate = self.get_start_datetime(eid)
+                sdate = e.get_start_datetime()
                 if dt <= sdate:
-                    ret.append((sdate, eid))
+                    ret.append((sdate, e))
             else:
                 d = rule.after(dt, inc=True)
                 if d:
-                    ret.append((d, eid))
+                    ret.append((d, e))
         return ret
 
     def get_timezones(self):
@@ -337,20 +257,97 @@ class ICal(object):
             tzids.append(tz['TZID'])
         return tzids
 
-    def _get_event(self, uid):
-        for event in self.ical.walk('VEVENT'):
-            if event['UID'] == uid:
-                return event
-        raise Exception("No VEVENT with UID %s found" % uid)
+class Event(object):
+    def __init__(self, ical, event, tzones):
+        self.uid = event.uid.value
+        self.ical = ical
+        self._event = event
+        self._tzical = tzones
 
-    def _get_datetime(self, uid, compname):
+    def get_summary(self):
+        return self._event.summary.value
+
+    def set_summary(self, summary):
+        event = self._event.summary.value = summary
+
+    def get_start_datetime(self):
+        return self._event.dtstart.value
+
+    def set_start_datetime(self, dt):
+        self._event.dtstart.value = dt
+
+    def get_end_datetime(self):
+        return self._event.dtend.value
+
+    def set_end_datetime(self, dt):
+        self._event.dtend.value = dt
+
+    def get_description(self):
+        event = self._event
+        return event['DESCRIPTION']
+
+    def set_description(self, description):
+        self._event['DESCRIPTION'] = description
+
+    def get_location(self):
+        return self._event.location.value
+
+    def set_location(self, location):
+        self._event.location.value = location
+
+    def get_url(self):
+        return self._event.url.value
+
+    def set_url(self, url):
+        self._event.url.value = url
+
+    def get_attendees(self):
+        ret = []
+        for at in self._event.attendee_list:
+            ret.append(Attendee(at))
+        return ret
+
+    def set_attendees(self, atlist):
+        return self._event['ATTENDEE']
+
+    def get_rrule(self):
+        """get_rrule(uid) -> dateutil.rrule
+
+        Returns RRULE defined for given event or None if
+        no RRULE has been defined
+
+        uid - Event UID for which rrule should be returned
+        """
+        try:
+            ret = None
+            rrule_str = self.get_rrule_str(self.uid)
+            rule_parts = rrule_str.split(';')
+            fixed_rrule = ""
+            for part in rule_parts:
+                if part.startswith('UNTIL') and len(part) == 14:
+                    part = "%s000000" % part
+                fixed_rrule.append(part + ";")
+
+            ret = rrulestr(fixed_rrule, dtstart=self.get_start_datetime())
+        except ValueError:
+            pass
+        finally:
+            return ret
+
+    def get_rrule_str(self):
+        """get_rrule_str(uid) -> string
+
+        Returns string representation of repeat rule for given event
+        """
+        return str(self._event['RRULE'])
+
+    def _get_datetime(self, compname):
         """_get_datetime(uid, compname) -> datetime
 
         Returns TZ aware datetime object from given sub-component
         (DTSTART, DTEND, etc) of given VEVENT identified by uid.
         """
-        event = self._get_event(uid)
-        strDT = str(event[compname])
+        strDT = str(self._event[compname])
         # this should be fixed in icalendar (only date specified => fails)
         if len(strDT) == 8:
             strDT = "%s000000" % strDT
@@ -361,12 +358,11 @@ class ICal(object):
         if len(strDT) == 16: # UTC time
             return dt
         else:
-            return self._get_tz_datetime(event[compname], dt)
+            return self._get_tz_datetime(self._event[compname], dt)
 
-    def _set_datetime(self, uid, compname, dt):
-        event = self._get_event(uid)
+    def _set_datetime(self, compname, dt):
         vdt = vDatetime(dt)
-        event[compname] = vdt.ical()
+        self._event[compname] = vdt.ical()
 
     def _get_tz_datetime(self, component, dt):
         tz = gettz() # use local TZ by default
@@ -381,15 +377,15 @@ class ICal(object):
 
 class Attendee(object):
 
-    possible_params = [('cn', 'name'),
-                       ('role', 'role'),
-                       ('rsvp', 'rsvp_request'),
-                       ('partstat','rsvp_status'),
+    possible_params = [('CN', 'name'),
+                       ('ROLE', 'role'),
+                       ('RSVP', 'rsvp_request'),
+                       ('PARTSTAT','rsvp_status'),
         ]
 
 
     def __init__(self, ical_attendee):
-        self.address = str(ical_attendee)
+        self.address = ical_attendee.value
         self.__ical = ical_attendee
         self.params = self.__ical.params
         for a, b in self.possible_params:
@@ -399,7 +395,7 @@ class Attendee(object):
         if self.params.has_key(paramname):
             if not propname:
                 propname = paramname
-            setattr(self, propname, self.params[paramname])
+            setattr(self, propname, self.params[paramname][0])
 
     def __split_str(self, s):
         if len(s) < 75:
@@ -413,9 +409,4 @@ class Attendee(object):
         return ret
 
     def __str__(self):
-        pars = ""
-        for param, propname in self.possible_params:
-            if hasattr(self, propname):
-                self.params[param] = getattr(self, propname)
-        ret = "ATTENDEE;%s:%s" % (self.params, self.address)
-        return self.__split_str(ret)
+        return self.__ical.serialize()
