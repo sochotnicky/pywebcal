@@ -159,7 +159,6 @@ class ICal(object):
         self.ical = vobj
 
         fileobj = StringIO.StringIO(str(self.ical.serialize()))
-        self._tzical = tzical(fileobj)
 
     def get_event_ids(self):
         """get_event_ids() -> [uid, uid1, ...]
@@ -179,7 +178,7 @@ class ICal(object):
         """
         ret = []
         for event in self.ical.vevent_list:
-            ret.append(Event(self.ical, event, self._tzical))
+            ret.append(Event(self.ical, event))
         return ret
 
     def events_before(self, dt):
@@ -258,11 +257,10 @@ class ICal(object):
         return tzids
 
 class Event(object):
-    def __init__(self, ical, event, tzones):
+    def __init__(self, ical, event):
         self.uid = event.uid.value
         self.ical = ical
         self._event = event
-        self._tzical = tzones
 
     def get_summary(self):
         return self._event.summary.value
@@ -341,39 +339,6 @@ class Event(object):
         """
         return str(self._event['RRULE'])
 
-    def _get_datetime(self, compname):
-        """_get_datetime(uid, compname) -> datetime
-
-        Returns TZ aware datetime object from given sub-component
-        (DTSTART, DTEND, etc) of given VEVENT identified by uid.
-        """
-        strDT = str(self._event[compname])
-        # this should be fixed in icalendar (only date specified => fails)
-        if len(strDT) == 8:
-            strDT = "%s000000" % strDT
-
-        # unfortunately vDatetime.from_ical is not TZ aware (ignores
-        # TZIDs defined in dates/times). We need to fix this...
-        dt = vDatetime.from_ical(strDT)
-        if len(strDT) == 16: # UTC time
-            return dt
-        else:
-            return self._get_tz_datetime(self._event[compname], dt)
-
-    def _set_datetime(self, compname, dt):
-        vdt = vDatetime(dt)
-        self._event[compname] = vdt.ical()
-
-    def _get_tz_datetime(self, component, dt):
-        tz = gettz() # use local TZ by default
-
-        if hasattr(component, 'params') and str(component.params)[0:4] == 'TZID':
-            tzname = str(component.params)[5:]
-            tz = self._tzical.get(tzname)
-
-        return datetime.datetime(dt.year, dt.month, dt.day,
-                                 dt.hour, dt.minute, dt.second,
-                                 0, tz)
 
 class Attendee(object):
 
