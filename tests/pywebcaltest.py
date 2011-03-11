@@ -20,7 +20,7 @@ from pywebcal import ICal
 import unittest
 
 import vobject
-from datetime import tzinfo, timedelta, datetime
+from datetime import tzinfo, timedelta, datetime, date
 
 
 class ICalTest(unittest.TestCase):
@@ -47,11 +47,12 @@ class ICalTest(unittest.TestCase):
 
     def test_datetime(self):
         ids = self.ical.get_events()
-        dts1 = datetime(2010, 8, 13, 0, 0, 0, 0, UTC())
+        #test with date
+        dts1 = date(2010, 8, 13)
         dtsret1 = ids[0].get_start_datetime()
         self.assertEqual(dts1, dtsret1)
 
-        dte1 = datetime(2010, 8, 14, 23, 59, 0, 0, UTC())
+        dte1 = date(2010, 8, 14)
         dteret1 = ids[0].get_end_datetime()
         self.assertEqual(dte1, dteret1)
 
@@ -60,10 +61,30 @@ class ICalTest(unittest.TestCase):
         # comparing tz-aware and unaware dates
         self.assertRaises(TypeError, lambda(x,y): x == y, dts1, dtsret1)
 
-        ids[0].set_end_datetime(dteret1 + timedelta(hours=1))
+        ids[0].set_end_datetime(dteret1 + timedelta(days=1))
         ids = self.ical.get_events()
-        dte1new = datetime(2010, 8, 15, 0, 59, 0, 0, UTC())
+        dte1new = date(2010, 8, 15)
         dteret1new = ids[0].get_end_datetime()
+        self.assertEqual(dte1new, dteret1new)
+
+        # test with datetime
+        dts1 = datetime(2010, 7, 24, 0, 0, 0, 0, UTC())
+        dtsret1 = ids[1].get_start_datetime()
+        self.assertEqual(dts1, dtsret1)
+
+        dte1 = datetime(2010, 7, 24, 23, 59, 0, 0, UTC())
+        dteret1 = ids[1].get_end_datetime()
+        self.assertEqual(dte1, dteret1)
+
+        dts1 = datetime(2010, 7, 25, 0, 0, 0, 0)
+        dtsret1 = ids[1].get_start_datetime()
+        # comparing tz-aware and unaware dates
+        self.assertRaises(TypeError, lambda(x,y): x == y, dts1, dtsret1)
+
+        ids[1].set_end_datetime(dteret1 + timedelta(hours=1))
+        ids = self.ical.get_events()
+        dte1new = datetime(2010, 7, 25, 0, 59, 0, 0, UTC())
+        dteret1new = ids[1].get_end_datetime()
         self.assertEqual(dte1new, dteret1new)
 
     def test_summary(self):

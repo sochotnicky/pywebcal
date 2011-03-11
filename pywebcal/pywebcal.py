@@ -198,11 +198,17 @@ class ICal(object):
         """
         ret = []
         es = self.get_events()
+        # prepare timeless date in case it's needed
+        d = dt.date()
         for e in es:
             rule = e.get_rrule()
             if not rule:
                 sdate = e.get_start_datetime()
-                if dt >= sdate:
+                if type(sdate) == datetime.date:
+                    cmpdate = d
+                else:
+                    cmpdate = dt
+                if cmpdate >= sdate:
                     ret.append((sdate, e))
             else:
                 d = rule.before(dt, inc=True)
@@ -219,11 +225,18 @@ class ICal(object):
         """
         ret = []
         es = self.get_events()
+        # prepare timeless starts-stops
+        dstart, dend = dtstart.date(), dtend.date()
         for e in es:
             rule = e.get_rrule()
             if not rule:
                 sdate = e.get_start_datetime()
-                if dtstart <= sdate <= dtend:
+                if type(sdate) == datetime.date:
+                    cmpstart, cmpend = dstart, dend
+                else:
+                    cmpstart, cmpend = dtstart, dtend
+
+                if cmpstart <= sdate <= cmpend:
                     ret.append((sdate, e))
             else:
                 d = rule.between(dtstart, dtend, inc=True)
@@ -240,11 +253,17 @@ class ICal(object):
         """
         ret = []
         es = self.get_events()
+        # prepare timeless date in case it's needed
+        d = dt.date()
         for e in es:
             rule = e.get_rrule()
             if not rule:
                 sdate = e.get_start_datetime()
-                if dt <= sdate:
+                if type(sdate) == datetime.date:
+                    cmpdate = d
+                else:
+                    cmpdate = dt
+                if cmpdate <= sdate:
                     ret.append((sdate, e))
             else:
                 d = rule.after(dt, inc=True)
