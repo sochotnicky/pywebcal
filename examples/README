@@ -1,0 +1,3 @@
+To run examples from this directory without installing you can do:
+
+PYTHONPATH=".." python example.py

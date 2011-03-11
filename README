@@ -1,0 +1,31 @@
+***************************
+*      INTRODUCTION       *
+***************************
+pywebcal is an attempt to simplify access to calendar files through
+WebDAV. Several other python libraries exist to handle files (see
+REFERENCES), but they were pretty low level or complex. I decided to
+create something less powerful but easier to work with :-)
+
+
+***************************
+*      REQUIREMENTS       *
+***************************
+
+dateutil - great python module for handling dates
+python-webdav-library - simple python library to access webdav stores
+vobject - low-level iCalendar handling library
+
+
+***************************
+*          USAGE          *
+***************************
+see examples directory
+
+
+***************************
+*       REFERENCES        *
+***************************
+ * vobject - http://vobject.skyhouseconsulting.com/
+ * dateutil - http://labix.org/python-dateutil
+ * caldav - http://pypi.python.org/pypi/caldav
+ * zanshin - http://chandlerproject.org/Projects/ZanshinProject
