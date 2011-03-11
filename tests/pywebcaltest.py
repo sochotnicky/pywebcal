@@ -30,12 +30,16 @@ class ICalTest(unittest.TestCase):
         self.ical = ICal(c)
         c = vobject.base.readComponents(open("test2.ics","r")).next()
         self.ical2 = ICal(c)
+        c = vobject.base.readComponents(open("onlytodo.ics","r")).next()
+        self.ical3 = ICal(c)
 
     def test_get_event_ids(self):
         ids = self.ical.get_event_ids()
         self.assertEqual(32, len(ids))
         ids = self.ical2.get_event_ids()
         self.assertEqual(1, len(ids))
+        ids = self.ical3.get_event_ids()
+        self.assertEqual(0, len(ids))
 
     def test_get_events(self):
         r = self.ical.get_events()
@@ -109,6 +113,9 @@ class ICalTest(unittest.TestCase):
         self.assertEqual(26, len(after))
 
         after = self.ical.events_after(datetime(2010, 12, 7, 0, 0, 0, 0, UTC()))
+        self.assertEqual(0, len(after))
+
+        after = self.ical3.events_after(datetime(2011, 3, 3, 0, 0, 0, 0, UTC()))
         self.assertEqual(0, len(after))
 
     def test_url(self):

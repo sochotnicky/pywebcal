@@ -165,8 +165,13 @@ class ICal(object):
         UIDs are used for access to concrete events defined within
         iCal file"""
         uids = []
-        for event in self.ical.vevent_list:
-            uids.append(event.uid.value)
+        try:
+            for event in self.ical.vevent_list:
+                uids.append(event.uid.value)
+        except AttributeError, e:
+            # this means ical has no events, maybe just todos?
+            # one way or the other -> ignore and return empty list
+            pass
         return uids
 
     def get_events(self):
@@ -175,8 +180,13 @@ class ICal(object):
         Returns Event classes defined in iCal instance.
         """
         ret = []
-        for event in self.ical.vevent_list:
-            ret.append(Event(self.ical, event))
+        try:
+            for event in self.ical.vevent_list:
+                ret.append(Event(self.ical, event))
+        except AttributeError, e:
+            # this means ical has no events, maybe just todos?
+            # one way or the other -> ignore and return empty list
+            pass
         return ret
 
     def events_before(self, dt):
