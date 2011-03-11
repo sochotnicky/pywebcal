@@ -103,10 +103,10 @@ class WebCal(object):
         modified = self._modifiedTimes[uid]
         cc = self.__get_cached_calendar(uid)
         if cc and cc[0] == modified: # calendar is cached
-            c = cc[1]
+            c = vobject.base.readComponents(StringIO.StringIO(cc[1])).next()
         else:
-            c = Calendar.from_string(rs.downloadContent().read())
-            self.__set_cached_calendar(uid, c, modified)
+            c = vobject.base.readComponents(rs.downloadContent().read()).next()
+            self.__set_cached_calendar(uid, c.serialize(), modified)
         return c
 
     def _connect(self):
