@@ -158,8 +158,6 @@ class ICal(object):
         """
         self.ical = vobj
 
-        fileobj = StringIO.StringIO(str(self.ical.serialize()))
-
     def get_event_ids(self):
         """get_event_ids() -> [uid, uid1, ...]
 
