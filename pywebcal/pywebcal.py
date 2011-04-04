@@ -293,7 +293,7 @@ class Event(object):
         return self._event.summary.value
 
     def set_summary(self, summary):
-        event = self._event.summary.value = summary
+        self._event.summary.value = summary
 
     def get_start_datetime(self):
         return self._event.dtstart.value
@@ -333,7 +333,7 @@ class Event(object):
         return ret
 
     def set_attendees(self, atlist):
-        return self._event['ATTENDEE']
+        self._event.attendee_list = atlist
 
     def get_rrule(self):
         """get_rrule(uid) -> dateutil.rrule
