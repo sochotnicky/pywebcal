@@ -217,7 +217,7 @@ class ICal(object):
         return ret
 
     def events_between(self, dtstart, dtend):
-        """events_before(datetime) -> [(datetime, uid), (datetime1, uid1), ...]
+        """events_before(datetime) -> [(datetime, Event), (datetime1, Event1), ...]
 
         Returns list of tuples of (datetime.datetime, Event UID)
         where datetime represents date of occurrence (start) of given
@@ -245,7 +245,7 @@ class ICal(object):
         return ret
 
     def events_after(self, dt):
-        """events_after(datetime) -> [(datetime, uid), (datetime1, uid1), ...]
+        """events_after(datetime) -> [(datetime, Event), (datetime1, Event1), ...]
 
         Returns list of tuples of (datetime.datetime, Event UID)
         where datetime represents date of nearest occurrence (start) of given
@@ -285,48 +285,99 @@ class ICal(object):
 
 class Event(object):
     def __init__(self, ical, event):
+        """__init__(ical, vevent) -> Event
+
+        ical - iCal text for the event
+        event - vevent instance representing given event
+        """
         self.uid = event.uid.value
         self.ical = ical
         self._event = event
 
     def get_summary(self):
+        """get_summary() -> str
+
+        Returns string representing summary of event
+        """
         return self._event.summary.value
 
     def set_summary(self, summary):
+        """set_summary(str)
+
+        Sets summary to text provided
+        """
         self._event.summary.value = summary
 
     def get_start_datetime(self):
+        """get_start_datetime() -> datetime.datetime or datetime.date
+
+        This returns start date of the event or datetime in case time
+        is included. This should probably be fixed to return datetime
+        always."""
         return self._event.dtstart.value
 
     def set_start_datetime(self, dt):
+        """set_start_datetime(dt)
+
+        Sets start datetime to provided datetime.datetime instance"""
         self._event.dtstart.value = dt
 
     def get_end_datetime(self):
+        """get_end_datetime() -> datetime.datetime or datetime.date
+
+        This returns end date of the event or datetime in case time
+        is included. This should probably be fixed to return datetime
+        always."""
         return self._event.dtend.value
 
     def set_end_datetime(self, dt):
+        """set_end_datetime(dt)
+
+        Sets end datetime to provided datetime.datetime instance"""
         self._event.dtend.value = dt
 
     def get_description(self):
+        """get_description() -> str
+
+        Returns long description of the event"""
         event = self._event
         return event['DESCRIPTION']
 
     def set_description(self, description):
+        """set_description(description)
+
+        Sets long description of the event"""
         self._event['DESCRIPTION'] = description
 
     def get_location(self):
+        """get_location() -> str
+
+        Returns event location text (where it is going to happen)"""
         return self._event.location.value
 
     def set_location(self, location):
+        """set_location(location)
+
+        Sets location text of the event"""
         self._event.location.value = location
 
     def get_url(self):
+        """get_url() -> str
+
+        Returns event url text"""
         return self._event.url.value
 
     def set_url(self, url):
+        """set_url(location)
+
+        Sets url text of the event"""
         self._event.url.value = url
 
     def get_attendees(self):
+        """get_attendees() -> [Attendee]
+
+        Returns list of Attendee classes representing event attendees
+        and their statuses"""
         ret = []
         for at in self._event.attendee_list:
             ret.append(Attendee(at))
