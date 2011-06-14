@@ -440,16 +440,5 @@ class Attendee(object):
                 propname = paramname
             setattr(self, propname, self.params[paramname][0])
 
-    def __split_str(self, s):
-        if len(s) < 75:
-            return s
-        cur_line = s
-        ret = ""
-        while len(cur_line) > 74:
-            ret = "%s%s\n\r " % (ret, cur_line[0:74])
-            cur_line = cur_line[74:]
-        ret = "%s%s" % (ret, cur_line[0:74])
-        return ret
-
     def __str__(self):
         return self.__ical.serialize()
