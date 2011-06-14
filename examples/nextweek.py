@@ -21,6 +21,5 @@ for uid in uids:
 
     es = cal.events_between(n, u)
     for dt, e in es:
-        events.append((e.get_summary(), e.get_start_datetime()))
+        print "%s: %s" % (e.get_start_datetime(), e.get_summary())
 
-print "Events in next week: %s\n" % events
