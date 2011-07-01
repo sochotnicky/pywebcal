@@ -21,6 +21,7 @@ import StringIO
 import datetime
 import logging
 import pickle
+import hashlib
 from os import path, environ
 
 try:
@@ -66,6 +67,8 @@ class WebCal(object):
         self.connection = None
         self._modifiedTimes = {}
         self._cache = None
+        self._connID = ConnID(webdavURL, username)
+        self._cache_file = "%s.%s" % (self._cache_file, self._connID.digest)
 
     def get_calendar_uids(self):
         """get_calendar_uids() -> [uid, uid1, ...]
@@ -90,7 +93,7 @@ class WebCal(object):
         return ret
 
     def get_calendar(self, uid):
-        """get_calendar(uid) -> icalendar.Calendar
+        """get_calendar(uid) -> ICal
 
         Returns Calendar instance from webdav URL identified by uid.
         """
@@ -103,10 +106,13 @@ class WebCal(object):
         modified = self._modifiedTimes[uid]
         cc = self.__get_cached_calendar(uid)
         if cc and cc[0] == modified: # calendar is cached
-            c = vobject.base.readComponents(StringIO.StringIO(cc[1])).next()
+            data = cc[1]
+            vcal = vobject.base.readComponents(StringIO.StringIO(data[0])).next()
+            c = ICal(vcal)
         else:
-            c = vobject.base.readComponents(rs.downloadContent().read()).next()
-            self.__set_cached_calendar(uid, c.serialize(), modified)
+            vcal = vobject.base.readComponents(rs.downloadContent().read()).next()
+            c = ICal(vcal)
+            self.__set_cached_calendar(uid, modified, (vcal.serialize(),))
         return c
 
     def get_all_events(self):
@@ -132,14 +138,14 @@ class WebCal(object):
 
         self.connection.connection.logger.setLevel(logging.WARNING)
 
-    def __set_cached_calendar(self, uid, calendar, modified):
+    def __set_cached_calendar(self, uid, modified, data):
         if not self._cache:
             self.__load_cache()
 
         if self._cache.has_key(uid) and self._cache[uid][0] == modified:
             return
 
-        self._cache[uid] = (modified, calendar)
+        self._cache[uid] = (modified, data)
         self.__save_cache()
 
     def __get_cached_calendar(self, uid):
@@ -166,7 +172,8 @@ class ICal(object):
     """High-level interface for working with iCal files"""
 
     def __init__(self, vobj):
-        """Initializes class with given vobject.icalendar.VCalendar2_0 instance
+        """Initializes class with given vobject.icalendar.VCalendar2_0
+        instance
         """
         self.ical = vobj
 
@@ -454,3 +461,16 @@ class Attendee(object):
 
     def __str__(self):
         return self.__ical.serialize()
+
+class ConnID(object):
+    """Class that holds unique connection ID so that we can identify connections"""
+
+    def __init__(self, url, login = None):
+        digest = hashlib.md5()
+        digest.update(url)
+        if login:
+            digest.update(login)
+
+        self.digest = digest.hexdigest()
+        self.url = url
+        self.login = login

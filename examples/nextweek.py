@@ -17,7 +17,7 @@ u = n + timedelta(days=7)
 
 events = []
 for uid in uids:
-    cal = ICal(wc.get_calendar(uid))
+    cal = wc.get_calendar(uid)
 
     es = cal.events_between(n, u)
     for dt, e in es:
