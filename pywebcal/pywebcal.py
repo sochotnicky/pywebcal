@@ -109,6 +109,18 @@ class WebCal(object):
             self.__set_cached_calendar(uid, c.serialize(), modified)
         return c
 
+    def get_all_events(self):
+        """get_all_events() -> [Event, Event1,...]
+
+        Returns all events in all calendars for this connection"""
+        if not self.connection:
+            self._connect()
+        events = []
+        for calid in self.get_calendar_uids():
+            cal = self.get_calendar(caldid)
+            events.extend(cal.get_events())
+        return ret
+
     def _connect(self):
         if self._webdavURL[-4:] == '.ics':
             self.connection = ResourceStorer(self._webdavURL, validateResourceNames=False)
