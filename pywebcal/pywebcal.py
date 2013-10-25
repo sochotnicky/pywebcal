@@ -405,36 +405,15 @@ class Event(object):
     def set_attendees(self, atlist):
         self._event.attendee_list = atlist
 
-    def get_rrule(self):
-        """get_rrule(uid) -> dateutil.rrule
+    def get_rruleset(self):
+        """get_rruleset(uid) -> dateutil.rrule.rruleset
 
-        Returns RRULE defined for given event or None if
-        no RRULE has been defined
+        Returns RRULESET defined for given event or None if
+        no RRULESET has been defined
 
         uid - Event UID for which rrule should be returned
         """
-        try:
-            ret = None
-            rrule_str = self.get_rrule_str(self.uid)
-            rule_parts = rrule_str.split(';')
-            fixed_rrule = ""
-            for part in rule_parts:
-                if part.startswith('UNTIL') and len(part) == 14:
-                    part = "%s000000" % part
-                fixed_rrule.append(part + ";")
-
-            ret = rrulestr(fixed_rrule, dtstart=self.get_start_datetime())
-        except ValueError:
-            pass
-        finally:
-            return ret
-
-    def get_rrule_str(self):
-        """get_rrule_str(uid) -> string
-
-        Returns string representation of repeat rule for given event
-        """
-        return str(self._event['RRULE'])
+        return self._event.getrruleset()
 
 
 class Attendee(object):
