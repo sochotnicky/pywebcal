@@ -272,6 +272,7 @@ class ICal(object):
                     dr = rule.between(cmpstart, cmpend, inc=True)
 
                 if dr:
+                    dr=dr[0]
                     ret.append((dr, e))
         return ret
 
