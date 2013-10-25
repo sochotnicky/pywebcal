@@ -220,19 +220,24 @@ class ICal(object):
         # prepare timeless date in case it's needed
         d = dt.date()
         for e in es:
-            rule = e.get_rrule()
+            rule = e.get_rruleset()
+            sdate = e.get_start_datetime()
+            if type(sdate) == datetime.date:
+                cmpdate = d
+            else:
+                cmpdate = dt
             if not rule:
-                sdate = e.get_start_datetime()
-                if type(sdate) == datetime.date:
-                    cmpdate = d
-                else:
-                    cmpdate = dt
                 if cmpdate >= sdate:
                     ret.append((sdate, e))
             else:
-                d = rule.before(dt, inc=True)
-                if d:
-                    ret.append((d, e))
+                dr = None
+                try:
+                    dr = rule.after(cmpdate, inc=True)
+                except TypeError, e:
+                    cmpdate = cmpdate.replace(tzinfo=None)
+                    dr = rule.before(cmpdate, inc=True)
+                if dr:
+                    ret.append((dr, e))
         return ret
 
     def events_between(self, dtstart, dtend):
@@ -247,20 +252,27 @@ class ICal(object):
         # prepare timeless starts-stops
         dstart, dend = dtstart.date(), dtend.date()
         for e in es:
-            rule = e.get_rrule()
-            if not rule:
-                sdate = e.get_start_datetime()
-                if type(sdate) == datetime.date:
-                    cmpstart, cmpend = dstart, dend
-                else:
-                    cmpstart, cmpend = dtstart, dtend
+            rule = e.get_rruleset()
+            sdate = e.get_start_datetime()
+            if type(sdate) == datetime.date:
+                cmpstart, cmpend = dstart, dend
+            else:
+                cmpstart, cmpend = dtstart, dtend
 
+            if not rule:
                 if cmpstart <= sdate <= cmpend:
                     ret.append((sdate, e))
             else:
-                d = rule.between(dtstart, dtend, inc=True)
-                if d:
-                    ret.append((d, e))
+                dr = None
+                try:
+                    dr = rule.between(cmpstart, cmpend, inc=True)
+                except TypeError:
+                    cmpstart = cmpstart.replace(tzinfo=None)
+                    cmpend = cmpend.replace(tzinfo=None)
+                    dr = rule.between(cmpstart, cmpend, inc=True)
+
+                if dr:
+                    ret.append((dr, e))
         return ret
 
     def events_after(self, dt):
@@ -275,19 +287,24 @@ class ICal(object):
         # prepare timeless date in case it's needed
         d = dt.date()
         for e in es:
-            rule = e.get_rrule()
+            rule = e.get_rruleset()
+            sdate = e.get_start_datetime()
+            if type(sdate) == datetime.date:
+                cmpdate = d
+            else:
+                cmpdate = dt
             if not rule:
-                sdate = e.get_start_datetime()
-                if type(sdate) == datetime.date:
-                    cmpdate = d
-                else:
-                    cmpdate = dt
                 if cmpdate <= sdate:
                     ret.append((sdate, e))
             else:
-                d = rule.after(dt, inc=True)
-                if d:
-                    ret.append((d, e))
+                dr = None
+                try:
+                    dr = rule.after(cmpdate, inc=True)
+                except TypeError, e:
+                    cmpdate = cmpdate.replace(tzinfo=None)
+                    dr = rule.after(cmpdate, inc=True)
+                if dr:
+                    ret.append((dr, e))
         return ret
 
     def get_timezones(self):
